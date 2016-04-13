@@ -83,7 +83,7 @@ public class PropertiesConfigReader implements ConfigReader {
             try {
                 // Load properties into the single Properties object overriding any property
                 // that may already exist
-                Map<String, String> p = new URLConfigReader(url).call().getToAdd();
+                Map<String, Object> p = new URLConfigReader(url).call().getToAdd();
                 LOG.debug("Loaded : {}", url.toExternalForm());
                 props.putAll(p);
     
