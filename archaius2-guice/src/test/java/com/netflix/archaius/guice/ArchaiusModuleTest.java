@@ -15,21 +15,8 @@
  */
 package com.netflix.archaius.guice;
 
-import java.util.Properties;
-
-import javax.inject.Inject;
-
-import com.netflix.archaius.DefaultConfigLoader;
-import com.netflix.archaius.api.exceptions.ConfigException;
-import org.junit.Assert;
-import org.junit.Test;
-
-import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.Provides;
-import com.google.inject.Singleton;
+import com.google.common.collect.Lists;
+import com.google.inject.*;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
 import com.netflix.archaius.ConfigMapper;
@@ -47,15 +34,22 @@ import com.netflix.archaius.cascade.ConcatCascadeStrategy;
 import com.netflix.archaius.config.MapConfig;
 import com.netflix.archaius.exceptions.MappingException;
 import com.netflix.archaius.visitor.PrintStreamVisitor;
+import org.junit.Assert;
+import org.junit.Test;
+
+import javax.inject.Inject;
+import java.util.Date;
+import java.util.List;
+import java.util.Properties;
 
 public class ArchaiusModuleTest {
-    
+
     public static class MyCascadingStrategy extends ConcatCascadeStrategy {
         public MyCascadingStrategy() {
             super(new String[]{"${env}"});
         }
     }
-    
+
     @Singleton
     @Configuration(prefix="prefix-${env}", allowFields=true)
     @ConfigurationSource(value={"moduleTest"}, cascading=MyCascadingStrategy.class)
@@ -65,54 +59,56 @@ public class ArchaiusModuleTest {
         private Boolean bool_value;
         private Double  double_value;
         private Property<Integer> fast_int;
+        private List<Integer> int_list;
+        private Date date;
         private Named named;
-        
+
         public void setStr_value(String value) {
             System.out.println("Setting string value to : " + value);
         }
-        
+
         public void setInt_value(Integer value) {
             System.out.println("Setting int value to : " + value);
         }
-        
+
         public void setNamed(Named named) {
             this.named = named;
         }
-        
+
         @Inject
         public MyServiceConfig() {
-            
+
         }
     }
-    
+
     @Singleton
     public static class MyService {
         private Boolean value;
-        
+
         @Inject
         public MyService(Config config, MyServiceConfig serviceConfig) {
             value = config.getBoolean("moduleTest.loaded");
         }
-        
+
         public Boolean getValue() {
             return value;
         }
     }
-    
+
     public static interface Named {
-        
+
     }
-    
+
     @Singleton
     public static class Named1 implements Named {
-        
+
     }
-    
+
     @Singleton
     public static class Named2 implements Named {
-        
+
     }
-    
+
     @Test
     public void test()  {
         final Properties props = new Properties();
@@ -121,7 +117,7 @@ public class ArchaiusModuleTest {
         props.setProperty("prefix-prod.bool_value", "true");
         props.setProperty("prefix-prod.double_value", "456.0");
         props.setProperty("env", "prod");
-        
+
         Injector injector = Guice.createInjector(
                 new ArchaiusModule() {
                     @Override
@@ -129,31 +125,31 @@ public class ArchaiusModuleTest {
                         bindApplicationConfigurationOverride().toInstance(MapConfig.from(props));
                     }
                 });
-        
+
         Config config = injector.getInstance(Config.class);
         Assert.assertEquals("prod", config.getString("env"));
-        
+
         config.accept(new PrintStreamVisitor(System.err));
-        
+
         MyService service = injector.getInstance(MyService.class);
         Assert.assertTrue(service.getValue());
-        
+
         MyServiceConfig serviceConfig = injector.getInstance(MyServiceConfig.class);
         Assert.assertEquals("str_value", serviceConfig.str_value);
         Assert.assertEquals(123,   serviceConfig.int_value.intValue());
         Assert.assertEquals(true,  serviceConfig.bool_value);
         Assert.assertEquals(456.0, serviceConfig.double_value, 0);
-        
+
         Assert.assertTrue(config.getBoolean("moduleTest.loaded"));
         Assert.assertTrue(config.getBoolean("moduleTest-prod.loaded"));
     }
-    
+
     @Test
     public void testNamedInjection()  {
         final Properties props = new Properties();
         props.setProperty("prefix-prod.named", "name1");
         props.setProperty("env", "prod");
-        
+
         Injector injector = Guice.createInjector(
                 new ArchaiusModule() {
                     @Override
@@ -168,11 +164,11 @@ public class ArchaiusModuleTest {
                         bind(Named.class).annotatedWith(Names.named("name2")).to(Named2.class);
                     }
                 }
-            );
-            
+        );
+
         MyService service = injector.getInstance(MyService.class);
         Assert.assertTrue(service.getValue());
-        
+
         MyServiceConfig serviceConfig = injector.getInstance(MyServiceConfig.class);
 
         Assert.assertTrue(serviceConfig.named instanceof Named1);
@@ -183,37 +179,37 @@ public class ArchaiusModuleTest {
         private final String name;
         private final Long id;
         private String loaded;
-        
+
         public ChildService(String name, Long id) {
             this.name = name;
             this.id = id;
         }
     }
-    
+
     @Test
     public void testPrefixReplacements() throws MappingException {
         Config config = MapConfig.builder()
                 .put("prefix.foo.123.loaded", "loaded")
                 .build();
-        
+
         ConfigMapper binder = new ConfigMapper();
-        
+
         ChildService service = new ChildService("foo", 123L);
         binder.mapConfig(service, config);
         Assert.assertEquals("loaded", service.loaded);
     }
-    
+
     public static interface TestProxyConfig {
         @DefaultValue("default")
         String getString();
-        
+
         @DefaultValue("foo,bar")
         String[] getStringArray();
-        
+
         @DefaultValue("1,2")
         Integer[] getIntArray();
     }
-    
+
     @Test
     public void testProxy()  {
         Injector injector = Guice.createInjector(
@@ -224,45 +220,45 @@ public class ArchaiusModuleTest {
                         return factory.newProxy(TestProxyConfig.class);
                     }
                 }
-            );
-        
+        );
+
         Config config = injector.getInstance(Config.class);
         SettableConfig settableConfig = injector.getInstance(Key.get(SettableConfig.class, RuntimeLayer.class));
-        
+
         TestProxyConfig object = injector.getInstance(TestProxyConfig.class);
         Assert.assertEquals("default", object.getString());
         Assert.assertArrayEquals(new String[]{"foo", "bar"}, object.getStringArray());
         Assert.assertArrayEquals(new Integer[]{1,2}, object.getIntArray());
-        
+
         settableConfig.setProperty("string", "new");
         settableConfig.setProperty("stringArray", "foonew,barnew");
         settableConfig.setProperty("intArray", "3,4");
         config.accept(new PrintStreamVisitor());
-        
+
         Assert.assertEquals("new", object.getString());
         Assert.assertArrayEquals(new String[]{"foonew", "barnew"}, object.getStringArray());
         Assert.assertArrayEquals(new Integer[]{3,4}, object.getIntArray());
-        
+
         settableConfig.clearProperty("string");
         Assert.assertEquals("default", object.getString());
     }
-    
+
     @Test
     public void testDefaultBindings() {
         Injector injector = Guice.createInjector(
                 new ArchaiusModule()
-            );
-        
+        );
+
         injector.getInstance(Key.get(SettableConfig.class, RuntimeLayer.class));
         injector.getInstance(Key.get(CompositeConfig.class, LibrariesLayer.class));
         injector.getInstance(Config.class);
     }
-    
+
     @Test
     public void testApplicationOverrideLayer() {
         final Properties props = new Properties();
         props.setProperty("a", "override");
-        
+
         Injector injector = Guice.createInjector(
                 new ArchaiusModule() {
                     @Override
@@ -270,45 +266,45 @@ public class ArchaiusModuleTest {
                         bindApplicationConfigurationOverride().toInstance(MapConfig.from(props));
                     }
                 });
-        
+
         Config config = injector.getInstance(Config.class);
         Assert.assertEquals("override", config.getString("a"));
     }
-    
+
     @Test
     public void testBasicLibraryOverride() {
         final Properties props = new Properties();
         props.setProperty("moduleTest.prop1", "fromOverride");
-        
+
         Injector injector = Guice.createInjector(new ArchaiusModule());
-        
+
         injector.getInstance(MyServiceConfig.class);
         Config config = injector.getInstance(Config.class);
         Assert.assertEquals("fromFile", config.getString("moduleTest.prop1"));
     }
-    
+
     @Test
     public void testLibraryOverride() {
         final Properties props = new Properties();
         props.setProperty("moduleTest.prop1", "fromOverride");
-        
+
         Injector injector = Guice.createInjector(
-              new ArchaiusModule() {
-                  @Override
-                  protected void configureArchaius() {
-                      bindApplicationConfigurationOverride().toInstance(MapConfig.from(props));
-                  }
-              },
-              new AbstractModule() {
+                new ArchaiusModule() {
+                    @Override
+                    protected void configureArchaius() {
+                        bindApplicationConfigurationOverride().toInstance(MapConfig.from(props));
+                    }
+                },
+                new AbstractModule() {
                     @Override
                     protected void configure() {
                         MapBinder.newMapBinder(binder(), String.class, Config.class, LibrariesLayer.class)
-                            .addBinding("moduleTest")
-                            .toInstance(MapConfig.from(props));
+                                .addBinding("moduleTest")
+                                .toInstance(MapConfig.from(props));
                     }
                 }
-            );
-        
+        );
+
         Config config = injector.getInstance(Config.class);
         injector.getInstance(MyServiceConfig.class);
         config.accept(new PrintStreamVisitor());
@@ -351,11 +347,33 @@ public class ArchaiusModuleTest {
             @Override
             protected void configureArchaius() {
                 bindApplicationConfigurationOverrideResource("application-override");
-           }
+            }
         });
         Config config = injector.getInstance(Config.class);
         Assert.assertEquals("b_value_no_override", config.getString("b"));
         Assert.assertEquals("a_value_override", config.getString("a"));
         Assert.assertEquals("c_value_override", config.getString("c"));
+    }
+
+    @Test
+    public void testObjectInjection() throws MappingException {
+        Date date = new Date(100);
+        final Config config = MapConfig.builder()
+                .put("env", "prod")
+                .put("prefix-prod.int_list", Lists.newArrayList(1, 2, 3))
+                .put("prefix-prod.date", date)
+                .build();
+
+        Injector injector = Guice.createInjector(
+                new ArchaiusModule() {
+                    @Override
+                    protected void configureArchaius() {
+                        bindApplicationConfigurationOverride().toInstance(config);
+                    }
+                });
+
+        MyServiceConfig serviceConfig = injector.getInstance(MyServiceConfig.class);
+        Assert.assertEquals(Lists.newArrayList(1, 2, 3), serviceConfig.int_list);
+        Assert.assertEquals(date, serviceConfig.date);
     }
 }
