@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Arrays;
@@ -34,6 +35,12 @@ public class ConfigurationScanner {
         for (Class<?> clazz : configurationClasses) {
             Configuration annonation = clazz.getAnnotation(Configuration.class);
             for (Field f : clazz.getDeclaredFields()) {
+                if (Modifier.isFinal(f.getModifiers())
+                        || Modifier.isStatic(f.getModifiers())
+                        || Modifier.isPrivate(f.getModifiers())) {
+                    continue;
+                }
+
                 if (annonation.prefix().contains("${")) {
                     if (Arrays.asList(annonation.params()).contains(f.getName())) {
                         // This is the param field. Skip it.
