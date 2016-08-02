@@ -23,12 +23,6 @@ dependencies {
     compile  'com.netflix.archaius:archaius-core:0.7.3'
 }
 
-eclipse {
-    classpath {
-        downloadSources = true
-        downloadJavadoc = true
-    }
-}
 
 test {
     forkEvery = 1

@@ -15,6 +15,7 @@
  */
 
 apply plugin: 'java'
+apply plugin: 'maven-publish'
 
 dependencies {
     compile     project(':archaius2-api')
@@ -23,10 +24,30 @@ dependencies {
     testCompile 'com.google.code.findbugs:jsr305:3.0.1'
 }
 
-eclipse {
-    classpath {
-        downloadSources = true
-        downloadJavadoc = true
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            groupId "com.netflix.archaius"
+            artifactId "archaius2-core"
+            version "2.1.2"
+            from components.java
+        }
     }
 }
 
+nexusUsername = "deployment"
+nexusPassword = "deployment"
+nexusRepositoryBaseURL = "http://aamnexus.corp.adobe.com:8080/nexus/content/repositories"
+
+publishing {
+    repositories {
+        maven {
+            name 'nexus'
+            credentials {
+                username nexusUsername
+                password nexusPassword
+            }
+            url "${nexusRepositoryBaseURL}/releases"
+        }
+    }
+}

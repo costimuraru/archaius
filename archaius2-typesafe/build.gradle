@@ -26,9 +26,9 @@ dependencies {
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
-eclipse {
-    classpath {
-        downloadSources = true
-        downloadJavadoc = true
-    }
-}
+//eclipse {
+//    classpath {
+//        downloadSources = true
+//        downloadJavadoc = true
+//    }
+//}
