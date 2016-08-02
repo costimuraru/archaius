@@ -23,10 +23,33 @@ dependencies {
     compile  'com.google.inject.extensions:guice-multibindings:4.0'
 }
 
-eclipse {
-    classpath {
-        downloadSources = true
-        downloadJavadoc = true
+apply plugin: 'maven'
+
+repositories {
+    maven {
+        name 'Artifactory repo'
+        url "AAM_TODO/artifactory/maven-aam-group"
+        credentials {
+            username = "aamuser"
+            password = "AAM_TODO"
+        }
+    }
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository(url: "AAM_TODO/artifactory/maven-aam-release"){
+                authentication(userName: "aamuser", password: "AAM_TODO")
+                pom.artifactId = project.name
+                pom.version = "2.1.13.adobe"
+            }
+            snapshotRepository(url: "AAM_TODO/artifactory/maven-aam-release"){
+                authentication(userName: "aamuser", password: "AAM_TODO")
+                pom.artifactId = project.name
+                pom.version = "2.1.13.adobe"
+            }
+        }
     }
 }
 

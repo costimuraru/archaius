@@ -3,6 +3,23 @@ apply plugin: 'java'
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
+buildscript {
+    repositories {
+        mavenLocal()
+        maven {
+            name 'Artifactory repo'
+            url "AAM_TODO/artifactory/maven-aam-group"
+            credentials {
+                username = "aamuser"
+                password = "AAM_TODO"
+            }
+        }
+    }
+    dependencies {
+        classpath 'com.adobe.aam:aam-gradle-plugin:1.14'
+    }
+}
+
 repositories {
     mavenCentral()
 }
@@ -16,9 +33,33 @@ dependencies {
     testCompile project(':archaius2-guice')
 }
 
-eclipse {
-    classpath {
-        downloadSources = true
-        downloadJavadoc = true
+
+apply plugin: 'maven'
+
+repositories {
+    maven {
+        name 'Artifactory repo'
+        url "AAM_TODO/artifactory/maven-aam-group"
+        credentials {
+            username = "aamuser"
+            password = "AAM_TODO"
+        }
+    }
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository(url: "AAM_TODO/artifactory/maven-aam-release"){
+                authentication(userName: "aamuser", password: "AAM_TODO")
+                pom.artifactId = project.name
+                pom.version = "2.1.13.adobe"
+            }
+            snapshotRepository(url: "AAM_TODO/artifactory/maven-aam-release"){
+                authentication(userName: "aamuser", password: "AAM_TODO")
+                pom.artifactId = project.name
+                pom.version = "2.1.13.adobe"
+            }
+        }
     }
 }

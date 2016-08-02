@@ -24,10 +24,4 @@ dependencies {
     testCompile project(':archaius2-guice')
 }
 
-eclipse {
-    classpath {
-        downloadSources = true
-        downloadJavadoc = true
-    }
-}
 
