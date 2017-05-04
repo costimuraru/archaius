@@ -1,16 +1,18 @@
 package com.netflix.archaius.typesafe.dynamic;
 
 import com.netflix.archaius.api.Config;
+import com.netflix.archaius.api.config.PollingStrategy;
 import com.netflix.archaius.config.EmptyConfig;
 import com.netflix.archaius.config.PollingDynamicConfig;
 import com.netflix.archaius.config.polling.FixedPollingStrategy;
+import com.netflix.archaius.util.Futures;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Provider;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * Provider that sets up a Config which is backed up by a typesafe loader.
@@ -63,18 +65,58 @@ public class TypesafeConfigProvider implements Provider<Config> {
 
         try {
             return dynamicConfig = new PollingDynamicConfig(new TypesafeConfigLoader(clientConfig.getTypesafeConfigSupplier()),
-                    new FixedPollingStrategy(clientConfig.getRefreshRateMs(), TimeUnit.MILLISECONDS));
+                    getPollingStrategy());
         } catch (Exception e) {
             LOG.error("Unable to initialize the dynamic typesafe config", e);
             throw new RuntimeException(e);
         }
     }
-    
+
+    private PollingStrategy getPollingStrategy() {
+        int refreshRateMs = clientConfig.getRefreshRateMs();
+        return refreshRateMs > 0
+                ? new FixedPollingStrategy(refreshRateMs, TimeUnit.MILLISECONDS)
+                : new SinglePollStrategy();
+    }
+
     @PreDestroy
     public void shutdown() {
         LOG.info("Shutting down TypesafeConfigProvider: {}.", toString());
         if (dynamicConfig != null) {
             dynamicConfig.shutdown();
+        }
+    }
+
+    /**
+     * Loads the config only once, at the beginning.
+     */
+    private class SinglePollStrategy implements PollingStrategy {
+
+        @Override
+        public Future<?> execute(Runnable callback) {
+            while (true) {
+                try {
+                    callback.run();
+                    break;
+                }
+
+                catch (Exception e) {
+                    try {
+                        LOG.warn("Fail to poll the polling source", e);
+                        TimeUnit.MILLISECONDS.sleep(2000);
+                    }
+                    catch (InterruptedException e1) {
+                        Thread.currentThread().interrupt();
+                        return Futures.immediateFailure(e);
+                    }
+                }
+            }
+
+            return CompletableFuture.completedFuture(callback);
+        }
+
+        @Override
+        public void shutdown() {
         }
     }
 }

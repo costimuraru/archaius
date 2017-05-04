@@ -21,7 +21,7 @@ public class DynamicTypesafeConfigTest {
     public void test() throws ConfigException {
         final TypesafeClientConfig config = new DefaultTypesafeClientConfig.Builder()
                 .withConfigFilePath(getResourceUrl("dynamic/reference.conf"))
-                .withRefreshIntervalMs(100)
+                .withRefreshIntervalMs(-1)
                 .build();
 
         Injector injector = Guice.createInjector(
